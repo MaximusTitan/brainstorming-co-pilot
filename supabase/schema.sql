@@ -24,3 +24,6 @@ create policy "own boards select" on public.boards for select to authenticated u
 create policy "own boards insert" on public.boards for insert to authenticated with check (user_id = auth.uid());
 create policy "own boards update" on public.boards for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "own boards delete" on public.boards for delete to authenticated using (user_id = auth.uid());
+
+-- Make the API pick up the new table immediately.
+notify pgrst, 'reload schema';

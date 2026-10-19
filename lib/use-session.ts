@@ -10,7 +10,7 @@ const KEY = "idea-pal-session-v1";
 export function useSession(user: User | null) {
   const [session, setSession] = useState<Session>(emptySession);
   const [ready, setReady] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Hydrate after mount (localStorage isn't available during SSR).
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -34,8 +34,11 @@ export function useSession(user: User | null) {
     if (!user || !session.id || !(session.topic || session.ideas.length)) return;
     const t = setTimeout(() => {
       saveBoard(session).then(
-        () => setSaveError(false),
-        () => setSaveError(true),
+        () => setSaveError(null),
+        (e) => {
+          console.error("Save failed", e);
+          setSaveError(e?.message ?? "unknown error");
+        },
       );
     }, 1000);
     return () => clearTimeout(t);

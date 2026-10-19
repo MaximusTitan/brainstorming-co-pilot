@@ -23,7 +23,7 @@ export function App() {
   const home = () => setScreen("start");
 
   const banner = saveError ? (
-    <p className="bg-red-100 px-4 py-1 text-center text-sm text-red-700">Couldn&apos;t save to your account. Your work is still safe on this device.</p>
+    <p className="bg-red-100 px-4 py-1 text-center text-sm text-red-700">Couldn&apos;t save to your account ({saveError}). Your work is still safe on this device.</p>
   ) : null;
 
   const screenEl = (() => { switch (screen) {
