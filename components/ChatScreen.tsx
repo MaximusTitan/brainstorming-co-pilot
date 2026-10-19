@@ -51,7 +51,9 @@ export function ChatScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [session.messages.length, busy]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [session.messages.length, busy]);
 
   function pin(text: string) {
     update((s) => {
