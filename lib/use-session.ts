@@ -1,49 +1,28 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { useCallback, useEffect, useState } from "react";
+import { saveBoard } from "./boards";
 import { emptySession, type Session } from "./types";
 
 const KEY = "idea-pal-session-v1";
-const ID_KEY = "idea-pal-session-id";
 
-function getSessionId() {
-  try {
-    let id = localStorage.getItem(ID_KEY);
-    if (!id) {
-      id = crypto.randomUUID();
-      localStorage.setItem(ID_KEY, id);
-    }
-    return id;
-  } catch {
-    return null;
-  }
-}
-
-/** Session state: localStorage for instant loads, Supabase (via /api/sessions) for durable saves. */
-export function useSession() {
+/** Working copy lives in localStorage; when signed in it's also saved to the user's boards in Supabase. */
+export function useSession(user: User | null) {
   const [session, setSession] = useState<Session>(emptySession);
   const [ready, setReady] = useState(false);
-  const idRef = useRef<string | null>(null);
-  const remoteOk = useRef(true);
+  const [saveError, setSaveError] = useState(false);
 
-  // Hydrate after mount (localStorage isn't available during SSR), then try the remote copy.
+  // Hydrate after mount (localStorage isn't available during SSR).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    idRef.current = getSessionId();
-    let local: Session | null = null;
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) local = { ...emptySession, ...JSON.parse(raw) };
+      if (raw) {
+        const s = { ...emptySession, ...JSON.parse(raw) } as Session;
+        setSession({ ...s, id: s.id || crypto.randomUUID() });
+      }
     } catch {}
-    if (local) setSession(local);
     setReady(true);
-
-    const id = idRef.current;
-    if (!id || local) return;
-    // Nothing local (new browser/cleared storage): restore from Supabase if we have it.
-    fetch(`/api/sessions/${id}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((row) => row?.data && setSession({ ...emptySession, ...row.data }))
-      .catch(() => {});
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -52,29 +31,22 @@ export function useSession() {
     try {
       localStorage.setItem(KEY, JSON.stringify(session));
     } catch {}
-
-    const id = idRef.current;
-    const hasContent = session.topic || session.ideas.length;
-    if (!id || !hasContent || !remoteOk.current) return;
+    if (!user || !session.id || !(session.topic || session.ideas.length)) return;
     const t = setTimeout(() => {
-      fetch(`/api/sessions/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(session),
-      })
-        .then((r) => {
-          if (r.status === 503) remoteOk.current = false; // Supabase not configured: stay local-only
-        })
-        .catch(() => {});
+      saveBoard(session).then(
+        () => setSaveError(false),
+        () => setSaveError(true),
+      );
     }, 1000);
     return () => clearTimeout(t);
-  }, [session, ready]);
+  }, [session, ready, user]);
 
   const update = useCallback((patch: Partial<Session> | ((s: Session) => Session)) => {
     setSession((s) => (typeof patch === "function" ? patch(s) : { ...s, ...patch }));
   }, []);
 
+  const replace = useCallback((s: Session) => setSession(s), []);
   const reset = useCallback(() => setSession(emptySession), []);
 
-  return { session, update, reset, ready };
+  return { session, update, replace, reset, ready, saveError };
 }

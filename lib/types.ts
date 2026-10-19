@@ -27,6 +27,7 @@ export type Doc = {
 };
 
 export type Session = {
+  id: string;
   topic: string;
   type: ProjectType;
   messages: ChatMsg[];
@@ -36,6 +37,7 @@ export type Session = {
 };
 
 export const emptySession: Session = {
+  id: "",
   topic: "",
   type: "Invention",
   messages: [],

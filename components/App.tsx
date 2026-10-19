@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
+import { loadBoard } from "@/lib/boards";
+import { useAuth } from "@/lib/use-auth";
 import { useSession } from "@/lib/use-session";
+import { AuthScreen } from "./AuthScreen";
 import { BoardScreen } from "./BoardScreen";
 import { ChatScreen } from "./ChatScreen";
 import { DocScreen } from "./DocScreen";
@@ -9,23 +12,38 @@ import { ShareScreen } from "./ShareScreen";
 import { StartScreen } from "./StartScreen";
 import { emptySession } from "@/lib/types";
 
-type Screen = "start" | "chat" | "board" | "refine" | "doc" | "share";
+type Screen = "auth" | "start" | "chat" | "board" | "refine" | "doc" | "share";
 
 export function App() {
-  const { session, update, ready } = useSession();
+  const auth = useAuth();
+  const { session, update, replace, reset, ready, saveError } = useSession(auth.user);
   const [screen, setScreen] = useState<Screen>("start");
   if (!ready) return null;
 
   const home = () => setScreen("start");
 
-  switch (screen) {
+  const banner = saveError ? (
+    <p className="bg-red-100 px-4 py-1 text-center text-sm text-red-700">Couldn&apos;t save to your account. Your work is still safe on this device.</p>
+  ) : null;
+
+  const screenEl = (() => { switch (screen) {
+    case "auth":
+      return <AuthScreen auth={auth} onHome={home} onDone={home} />;
     case "start":
       return (
         <StartScreen
+          user={auth.user}
+          authEnabled={auth.enabled}
+          onSignIn={() => setScreen("auth")}
+          onSignOut={async () => { await auth.signOut(); reset(); }}
+          onOpenBoard={async (id) => {
+            const s = await loadBoard(id);
+            if (s) { replace(s); setScreen(s.doc ? "doc" : "board"); }
+          }}
           hasSaved={session.ideas.length > 0 || session.messages.length > 0}
           onContinue={() => setScreen(session.doc ? "doc" : "board")}
           onStart={(topic, type) => {
-            update({ ...emptySession, topic, type });
+            update({ ...emptySession, id: crypto.randomUUID(), topic, type });
             setScreen("chat");
           }}
         />
@@ -57,5 +75,12 @@ export function App() {
       return <DocScreen session={session} update={update} onHome={home} onBack={() => setScreen("refine")} onExport={() => setScreen("share")} />;
     case "share":
       return <ShareScreen session={session} onHome={home} onBack={() => setScreen("doc")} onNew={home} />;
-  }
+  } })();
+
+  return (
+    <>
+      {banner}
+      {screenEl}
+    </>
+  );
 }
