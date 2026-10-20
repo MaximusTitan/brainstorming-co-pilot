@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { askImage } from "@/lib/ai-client";
 import type { Doc, Session } from "@/lib/types";
 import { Button, Header } from "./ui";
 
@@ -58,13 +60,45 @@ export function DocScreen({
   onBack: () => void;
   onExport: () => void;
 }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   if (!session.doc) return null;
+  const doc = session.doc;
+
+  async function imagine() {
+    setBusy(true);
+    setError("");
+    try {
+      const image = await askImage({ title: doc.title, bigIdea: doc.bigIdea });
+      update((s) => (s.doc ? { ...s, doc: { ...s.doc, image } } : s));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Oops, try again!");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <Header onHome={onHome} />
-      <div className="mx-auto w-full max-w-3xl flex-1 p-4 flex flex-col gap-3">
+      <div className="mx-auto w-full max-w-6xl flex-1 p-4 flex flex-col gap-3">
         <p className="text-sm text-stone-600">✏️ Tap any text to change it — it&apos;s your document!</p>
-        <DocView doc={session.doc} onChange={(doc) => update((s) => ({ ...s, doc }))} />
+        <div className="grid lg:grid-cols-[1fr_340px] gap-5 items-start">
+          <DocView doc={doc} onChange={(d) => update((s) => ({ ...s, doc: d }))} />
+          <aside className="rounded-2xl border-2 border-orange-300 bg-orange-50 p-4 flex flex-col gap-3 lg:sticky lg:top-4">
+            <h2 className="font-bold">🎨 See your idea</h2>
+            <div className="aspect-square w-full overflow-hidden rounded-xl border-2 border-dashed border-orange-300 bg-white grid place-items-center">
+              {doc.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={doc.image} alt={`Picture of ${doc.title}`} className="h-full w-full object-cover" />
+              ) : (
+                <p className="px-4 text-center text-sm text-stone-500">{busy ? "Drawing your idea…" : "Press Imagine to see a picture!"}</p>
+              )}
+            </div>
+            <Button disabled={busy} onClick={imagine}>{busy ? "Drawing…" : doc.image ? "✨ Imagine again" : "✨ Imagine"}</Button>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+          </aside>
+        </div>
         <div className="flex gap-3 justify-between">
           <Button variant="ghost" onClick={onBack}>← Back to questions</Button>
           <Button onClick={onExport}>Export →</Button>

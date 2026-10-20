@@ -24,6 +24,8 @@ export type Doc = {
   nextActions: string[];
   strengths: string[];
   weaknesses: string[];
+  /** Small JPEG data URL from the Imagine button. */
+  image?: string;
 };
 
 export type Session = {

@@ -26,7 +26,13 @@ export function ShareScreen({ session, onHome, onBack, onNew }: { session: Sessi
     <>
       <div className="print:hidden"><Header onHome={onHome} /></div>
       <div className="mx-auto w-full max-w-4xl flex-1 p-4 grid md:grid-cols-[1fr_280px] gap-5">
-        <div className="max-h-[75vh] overflow-y-auto print:max-h-none"><DocView doc={session.doc} /></div>
+        <div className="max-h-[75vh] overflow-y-auto print:max-h-none flex flex-col gap-3">
+          {session.doc.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={session.doc.image} alt={`Picture of ${session.doc.title}`} className="w-full max-w-sm self-center rounded-2xl border-2 border-stone-300" />
+          )}
+          <DocView doc={session.doc} />
+        </div>
         <aside className="flex flex-col gap-3 print:hidden">
           <h1 className="text-2xl font-bold">Share your plan 🎉</h1>
           <Button variant="ghost" onClick={() => window.print()}>🖨️ Print / save as PDF</Button>

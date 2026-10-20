@@ -41,3 +41,31 @@ export const askHelper = (p: {
   answers: { what: string; why: string; how: string };
   history: { role: string; text: string }[];
 }) => call<HelperReply>({ action: "helper", ...p });
+
+/** Generates a picture, then shrinks it so it stays small enough to save with the document. */
+export async function askImage(p: { title: string; bigIdea: string }): Promise<string> {
+  const res = await fetch("/api/imagine", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(p),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? "Could not make the picture");
+  return shrink(data.image as string, 640);
+}
+
+function shrink(src: string, size: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, size / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
