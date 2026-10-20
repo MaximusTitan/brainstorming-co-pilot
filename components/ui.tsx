@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import { useRef, useState } from "react";
 import type { CardColor } from "@/lib/types";
 
@@ -28,8 +29,8 @@ export function Button({
 export function Header({ onHome, right }: { onHome: () => void; right?: React.ReactNode }) {
   return (
     <header className="flex items-center justify-between px-5 py-3 border-b border-stone-200 bg-white">
-      <button onClick={onHome} className="text-xl font-bold text-orange-600">
-        💡 Idea Buddy
+      <button onClick={onHome} aria-label="Idea Buddy home">
+        <Image src="/logo.png" alt="Idea Buddy" width={1248} height={314} className="h-9 w-auto" priority />
       </button>
       <div className="flex items-center gap-2">{right}</div>
     </header>
