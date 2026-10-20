@@ -30,17 +30,14 @@ export const askDocument = (p: {
   answers: { what: string; why: string; how: string };
 }) => call<Doc>({ action: "document", ...p });
 
-export type Persona = "pip" | "scientist" | "artist" | "customer" | "friend";
-export type CopilotReply = {
-  message: string;
-  suggestions: { field: "what" | "why" | "how"; text: string }[];
-  scores: { clarity: number; originality: number; doability: number };
+export type HelperReply = {
+  reply: string;
+  suggestion: { field: "what" | "why" | "how"; text: string } | null;
 };
 
-export const askCopilot = (p: {
+export const askHelper = (p: {
   topic: string;
   idea: string;
   answers: { what: string; why: string; how: string };
-  persona: Persona;
-  question?: string;
-}) => call<CopilotReply>({ action: "copilot", ...p });
+  history: { role: string; text: string }[];
+}) => call<HelperReply>({ action: "helper", ...p });

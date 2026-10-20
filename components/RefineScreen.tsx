@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Confetti } from "./Confetti";
 import { askDocument, askRefine } from "@/lib/ai-client";
 import type { Session } from "@/lib/types";
 import { Button, Header, TextWithMic, cardBg } from "./ui";
-import { CoPilot } from "./CoPilot";
+import { ChatHelper } from "./ChatHelper";
 
 const KEYS = ["what", "why", "how"] as const;
 const COLOR = { what: "bg-sky-200", why: "bg-green-200", how: "bg-orange-200" };
@@ -27,7 +26,6 @@ export function RefineScreen({
   const [hint, setHint] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [party, setParty] = useState(false);
 
   useEffect(() => {
     if (!idea) return;
@@ -42,10 +40,6 @@ export function RefineScreen({
 
   const setAns = (k: (typeof KEYS)[number], v: string) => {
     const next = { ...idea.answers, [k]: v };
-    if (answered < 3 && KEYS.every((x) => next[x].trim())) {
-      setParty(true);
-      setTimeout(() => setParty(false), 2500);
-    }
     update((s) => ({ ...s, ideas: s.ideas.map((i) => (i.id === idea.id ? { ...i, answers: next } : i)) }));
   };
 
@@ -67,8 +61,7 @@ export function RefineScreen({
   return (
     <>
       <Header onHome={onHome} />
-      {party && <Confetti />}
-      <div className="mx-auto w-full max-w-6xl flex-1 p-4 grid md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr_320px] gap-5">
+      <div className="mx-auto w-full max-w-6xl flex-1 p-4 grid md:grid-cols-[220px_1fr] lg:grid-cols-[220px_1fr_300px] gap-5">
         <aside className="flex flex-col gap-3">
           <h1 className="text-2xl font-bold">Let&apos;s grow your idea 🌱</h1>
           <div className={`rounded-xl border-2 p-3 ${cardBg[idea.color]}`}>
@@ -102,7 +95,7 @@ export function RefineScreen({
           {hint && <p className="text-sm text-stone-600">Stuck? 🦉 {hint}</p>}
         </section>
         <div className="md:col-span-2 lg:col-span-1">
-          <CoPilot
+          <ChatHelper
             topic={session.topic}
             idea={idea.text}
             answers={idea.answers}
