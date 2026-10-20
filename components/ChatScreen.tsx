@@ -110,7 +110,7 @@ export function ChatScreen({
                 </div>
               ),
             )}
-            {busy && <p className="text-stone-500 animate-pulse">Idea Pal is thinking…</p>}
+            {busy && <p className="text-stone-500 animate-pulse">Idea Buddy is thinking…</p>}
             {error && (
               <p className="text-red-600 text-sm">
                 {error} <button className="underline" onClick={() => ask()}>Try again</button>

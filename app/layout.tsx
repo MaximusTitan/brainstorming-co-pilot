@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Idea Pal – Brainstorming Co-Pilot",
+  title: "Idea Buddy – Brainstorming Co-Pilot",
   description: "A thinking partner that helps students turn problems into ideas.",
 };
 

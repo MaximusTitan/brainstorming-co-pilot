@@ -29,7 +29,7 @@ export function Header({ onHome, right }: { onHome: () => void; right?: React.Re
   return (
     <header className="flex items-center justify-between px-5 py-3 border-b border-stone-200 bg-white">
       <button onClick={onHome} className="text-xl font-bold text-orange-600">
-        💡 Idea Pal
+        💡 Idea Buddy
       </button>
       <div className="flex items-center gap-2">{right}</div>
     </header>
