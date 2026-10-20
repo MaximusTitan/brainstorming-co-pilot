@@ -32,7 +32,11 @@ export function useAuth() {
     },
     /** Returns an error message, or "check-email" when the project requires email confirmation. */
     async signUp(email: string, password: string) {
-      const { data, error } = await getSupabase()!.auth.signUp({ email, password });
+      const { data, error } = await getSupabase()!.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
       if (error) return error.message;
       return data.session ? null : "check-email";
     },
