@@ -17,14 +17,10 @@ export function StartScreen({
   hasSaved,
   onContinue,
   user,
-  authEnabled,
-  onSignIn,
   onSignOut,
   onOpenBoard,
 }: {
   user: User | null;
-  authEnabled: boolean;
-  onSignIn: () => void;
   onSignOut: () => void;
   onOpenBoard: (id: string) => void;
   onStart: (topic: string, type: ProjectType) => void;
@@ -48,13 +44,11 @@ export function StartScreen({
         right={
           <>
             {hasSaved && <Button variant="ghost" className="!py-1.5 text-sm" onClick={onContinue}>Current project</Button>}
-            {user ? (
+            {user && (
               <>
                 <span className="hidden sm:inline text-sm text-stone-600">{user.email}</span>
                 <Button variant="ghost" className="!py-1.5 text-sm" onClick={onSignOut}>Sign out</Button>
               </>
-            ) : (
-              authEnabled && <Button variant="ghost" className="!py-1.5 text-sm" onClick={onSignIn}>Sign in</Button>
             )}
           </>
         }
@@ -99,9 +93,6 @@ export function StartScreen({
               ))}
             </ul>
           </section>
-        )}
-        {!user && authEnabled && (
-          <p className="text-center text-sm"><button className="underline" onClick={onSignIn}>Sign in</button> to save your boards.</p>
         )}
       </main>
     </>
