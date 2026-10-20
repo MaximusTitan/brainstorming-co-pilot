@@ -14,6 +14,10 @@ create table if not exists public.boards (
 );
 create index if not exists boards_user_idx on public.boards (user_id, updated_at desc);
 
+-- Table privileges for the API roles (newer projects don't grant these by default).
+-- Row access is still limited to each user's own rows by the policies below.
+grant select, insert, update, delete on public.boards to authenticated;
+
 alter table public.boards enable row level security;
 
 drop policy if exists "own boards select" on public.boards;
