@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { useAuth } from "@/lib/use-auth";
 import { Button, Header } from "./ui";
 
-export function AuthScreen({ auth, onHome, onDone }: { auth: ReturnType<typeof useAuth>; onHome: () => void; onDone: () => void }) {
+export function AuthScreen({ auth, pendingTopic, onHome, onDone }: { auth: ReturnType<typeof useAuth>; pendingTopic?: string; onHome: () => void; onDone: () => void }) {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +27,7 @@ export function AuthScreen({ auth, onHome, onDone }: { auth: ReturnType<typeof u
       <Header onHome={onHome} />
       <main className="mx-auto w-full max-w-sm flex-1 px-5 py-10">
         <h1 className="text-2xl font-bold mb-1">{mode === "in" ? "Welcome back!" : "Make your account"}</h1>
-        <p className="text-sm text-stone-600 mb-5">Sign in to keep your boards safe and open them on any device.</p>
+        <p className="text-sm text-stone-600 mb-5">{pendingTopic ? <>Sign in to start thinking about <b>&ldquo;{pendingTopic}&rdquo;</b>. Your boards are saved to your account.</> : "Sign in to keep your boards safe and open them on any device."}</p>
         <form onSubmit={submit} className="flex flex-col gap-3">
           <input className={input} type="email" required placeholder="Email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <input className={input} type="password" required minLength={6} placeholder="Password (6+ characters)" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} />

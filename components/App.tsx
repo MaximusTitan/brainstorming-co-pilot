@@ -10,7 +10,7 @@ import { DocScreen } from "./DocScreen";
 import { RefineScreen } from "./RefineScreen";
 import { ShareScreen } from "./ShareScreen";
 import { StartScreen } from "./StartScreen";
-import { emptySession } from "@/lib/types";
+import { emptySession, type ProjectType } from "@/lib/types";
 
 type Screen = "auth" | "start" | "chat" | "board" | "refine" | "doc" | "share";
 
@@ -18,9 +18,19 @@ export function App() {
   const auth = useAuth();
   const { session, update, replace, reset, ready, saveError } = useSession(auth.user);
   const [screen, setScreen] = useState<Screen>("start");
+  const [pending, setPending] = useState<{ topic: string; type: ProjectType } | null>(null);
   if (!ready) return null;
 
-  const home = () => setScreen("start");
+  const home = () => {
+    setPending(null);
+    setScreen("start");
+  };
+
+  function begin(topic: string, type: ProjectType) {
+    update({ ...emptySession, id: crypto.randomUUID(), topic, type });
+    setPending(null);
+    setScreen("chat");
+  }
 
   const banner = saveError ? (
     <p className="bg-red-100 px-4 py-1 text-center text-sm text-red-700">Couldn&apos;t save to your account ({saveError}). Your work is still safe on this device.</p>
@@ -28,7 +38,7 @@ export function App() {
 
   const screenEl = (() => { switch (screen) {
     case "auth":
-      return <AuthScreen auth={auth} onHome={home} onDone={home} />;
+      return <AuthScreen auth={auth} pendingTopic={pending?.topic} onHome={home} onDone={() => (pending ? begin(pending.topic, pending.type) : home())} />;
     case "start":
       return (
         <StartScreen
@@ -43,8 +53,10 @@ export function App() {
           hasSaved={session.ideas.length > 0 || session.messages.length > 0}
           onContinue={() => setScreen(session.doc ? "doc" : "board")}
           onStart={(topic, type) => {
-            update({ ...emptySession, id: crypto.randomUUID(), topic, type });
-            setScreen("chat");
+            if (auth.enabled && !auth.user) {
+              setPending({ topic, type });
+              setScreen("auth");
+            } else begin(topic, type);
           }}
         />
       );
