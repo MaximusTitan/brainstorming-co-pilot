@@ -1,6 +1,6 @@
 import { generateImage } from "ai";
 
-const IMAGE_MODEL = process.env.IMAGE_MODEL ?? "bfl/flux-2-klein-9b";
+const IMAGE_MODEL = process.env.IMAGE_MODEL ?? "openai/gpt-image-2";
 
 export async function POST(req: Request) {
   const { title, bigIdea } = (await req.json()) as { title?: string; bigIdea?: string };
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const prompt = `A bright, friendly, colourful children's book illustration of this invention: ${title.slice(0, 120)}. ${(bigIdea ?? "").slice(0, 400)} Show the object clearly in the centre on a plain light background. No text, no letters, no people's faces.`;
 
   try {
-    const { image } = await generateImage({ model: IMAGE_MODEL, prompt, aspectRatio: "1:1" });
+    const { image } = await generateImage({ model: IMAGE_MODEL, prompt, size: "1024x1024" });
     return Response.json({ image: `data:${image.mediaType ?? "image/png"};base64,${image.base64}` });
   } catch (e) {
     return Response.json(
