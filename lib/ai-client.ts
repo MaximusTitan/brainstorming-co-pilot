@@ -29,3 +29,18 @@ export const askDocument = (p: {
   idea: string;
   answers: { what: string; why: string; how: string };
 }) => call<Doc>({ action: "document", ...p });
+
+export type Persona = "pip" | "scientist" | "artist" | "customer" | "friend";
+export type CopilotReply = {
+  message: string;
+  suggestions: { field: "what" | "why" | "how"; text: string }[];
+  scores: { clarity: number; originality: number; doability: number };
+};
+
+export const askCopilot = (p: {
+  topic: string;
+  idea: string;
+  answers: { what: string; why: string; how: string };
+  persona: Persona;
+  question?: string;
+}) => call<CopilotReply>({ action: "copilot", ...p });

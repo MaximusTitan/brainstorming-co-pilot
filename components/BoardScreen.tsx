@@ -74,7 +74,7 @@ export function BoardScreen({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => groupOnto(i.id)}
                     onClick={() => setSelected(i.id === selected ? null : i.id)}
-                    className={`rounded-xl border-2 p-3 min-h-28 flex flex-col justify-between cursor-grab shadow-sm ${cardBg[i.color]} ${selected === i.id ? "ring-4 ring-orange-400" : ""}`}
+                    className={`animate-pop rounded-xl border-2 p-3 min-h-28 flex flex-col justify-between cursor-grab shadow-sm ${cardBg[i.color]} ${selected === i.id ? "ring-4 ring-orange-400" : ""}`}
                   >
                     {editing === i.id ? (
                       <textarea

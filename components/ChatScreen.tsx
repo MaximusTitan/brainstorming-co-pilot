@@ -89,9 +89,9 @@ export function ChatScreen({
           <div className="flex-1 flex flex-col gap-3 overflow-y-auto pb-2">
             {session.messages.map((m, i) =>
               m.role === "user" ? (
-                <div key={i} className="self-end max-w-[85%] rounded-2xl bg-orange-100 border border-orange-300 px-4 py-2">{m.text}</div>
+                <div key={i} className="animate-pop self-end max-w-[85%] rounded-2xl bg-orange-100 border border-orange-300 px-4 py-2">{m.text}</div>
               ) : (
-                <div key={i} className="max-w-[90%] rounded-2xl bg-white border border-stone-300 px-4 py-3">
+                <div key={i} className="animate-pop max-w-[90%] rounded-2xl bg-white border border-stone-300 px-4 py-3">
                   <p>{m.text}</p>
                   {m.chips && (
                     <div className="mt-2 flex flex-wrap gap-2">

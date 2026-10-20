@@ -21,6 +21,18 @@ const schemas = {
     }),
     hint: z.string(),
   }),
+  copilot: z.object({
+    message: z.string().describe("1-3 short friendly sentences reacting to what the student wrote, in the persona's voice. Ask a question or give a gentle challenge; do not write their answer for them"),
+    suggestions: z.array(z.object({
+      field: z.enum(["what", "why", "how"]),
+      text: z.string().describe("A short thinking starter (under 12 words) the student can add and edit, not a finished answer"),
+    })).describe("2 starters"),
+    scores: z.object({
+      clarity: z.number().min(1).max(5),
+      originality: z.number().min(1).max(5),
+      doability: z.number().min(1).max(5),
+    }),
+  }),
   document: z.object({
     title: z.string(),
     bigIdea: z.string().describe("2 sentences"),
@@ -47,6 +59,19 @@ Reply to the student and offer 3 NEW idea chips from a different perspective tha
   } else if (action === "refine") {
     prompt = `Topic: "${body.topic}". The student picked this idea: "${body.idea}".
 Ask one short WHAT, WHY and HOW question to help them grow it, plus a tiny hint if they get stuck.`;
+  } else if (action === "copilot") {
+    const personas: Record<string, string> = {
+      pip: "Pip the wise owl, a kind thinking coach",
+      scientist: "a curious scientist who asks about testing, evidence and how things really work",
+      artist: "a playful artist who cares about looks, feelings and surprising twists",
+      customer: "a real customer who asks if it is useful, easy and worth it",
+      friend: "a friendly classmate who cheers them on and spots what is confusing",
+    };
+    prompt = `You are ${personas[body.persona] ?? personas.pip}, co-piloting a student developing an idea.
+Topic: "${body.topic}". Idea: "${body.idea}".
+Student's notes so far - What it looks like: ${body.answers?.what || "-"}; Why it is needed: ${body.answers?.why || "-"}; How it works: ${body.answers?.how || "-"}.
+${body.question ? `The student asks: "${body.question}"` : "React to their latest thinking and help them go one step deeper."}
+Score clarity, originality and doability honestly from 1 to 5 (1 when little is written).`;
   } else {
     prompt = `Topic: "${body.topic}". Idea: "${body.idea}".
 Student answers - What: ${body.answers?.what || "-"}; Why: ${body.answers?.why || "-"}; How: ${body.answers?.how || "-"}.
