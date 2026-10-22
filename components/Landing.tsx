@@ -51,7 +51,7 @@ export function Landing({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp
                 ))}
               </div>
             </div>
-            <Image src="/screens/board.png" alt="Idea Buddy idea board with colourful cards" width={800} height={500} priority className="w-full rounded-2xl border-4 border-[#FFF8EE] shadow-2xl md:rotate-1" />
+            <Image src="/screens/doc.png" alt="Idea Buddy plan for a homework wristband with an AI-drawn picture" width={800} height={500} priority className="w-full rounded-2xl border-4 border-[#FFF8EE] shadow-2xl md:rotate-1" />
           </div>
         </section>
 
