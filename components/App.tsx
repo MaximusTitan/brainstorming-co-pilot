@@ -4,6 +4,7 @@ import { loadBoard } from "@/lib/boards";
 import { useAuth } from "@/lib/use-auth";
 import { useSession } from "@/lib/use-session";
 import { AuthScreen } from "./AuthScreen";
+import { Landing } from "./Landing";
 import { BoardScreen } from "./BoardScreen";
 import { ChatScreen } from "./ChatScreen";
 import { DocScreen } from "./DocScreen";
@@ -17,10 +18,17 @@ type Screen = "start" | "chat" | "board" | "refine" | "doc" | "share";
 export function App() {
   const auth = useAuth();
   const { session, update, replace, reset, ready, saveError } = useSession(auth.user);
+  const [authMode, setAuthMode] = useState<"in" | "up" | null>(null);
   const [screen, setScreen] = useState<Screen>("start");
-  // Login / sign-up is the first page: nothing else shows until the user is signed in.
+  // Signed-out visitors see the landing page; sign-in / sign-up opens from it.
   if (!ready || auth.loading) return null;
-  if (auth.enabled && !auth.user) return <AuthScreen auth={auth} onHome={() => {}} onDone={() => setScreen("start")} />;
+  if (auth.enabled && !auth.user) {
+    return authMode ? (
+      <AuthScreen key={authMode} auth={auth} initialMode={authMode} onHome={() => setAuthMode(null)} onDone={() => { setAuthMode(null); setScreen("start"); }} />
+    ) : (
+      <Landing onSignIn={() => setAuthMode("in")} onSignUp={() => setAuthMode("up")} />
+    );
+  }
 
   const home = () => setScreen("start");
 

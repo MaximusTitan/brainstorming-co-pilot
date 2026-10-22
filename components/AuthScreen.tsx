@@ -3,8 +3,8 @@ import { useState } from "react";
 import type { useAuth } from "@/lib/use-auth";
 import { Button, Header } from "./ui";
 
-export function AuthScreen({ auth, onHome, onDone }: { auth: ReturnType<typeof useAuth>; onHome: () => void; onDone: () => void }) {
-  const [mode, setMode] = useState<"in" | "up">("in");
+export function AuthScreen({ auth, initialMode = "in", onHome, onDone }: { auth: ReturnType<typeof useAuth>; initialMode?: "in" | "up"; onHome: () => void; onDone: () => void }) {
+  const [mode, setMode] = useState<"in" | "up">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
