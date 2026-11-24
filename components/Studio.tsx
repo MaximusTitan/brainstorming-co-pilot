@@ -348,7 +348,12 @@ export function Studio({
                   {S.chips && !T.busy && S.chips.items.map((it) => (
                     <button key={it.val} className="chip" aria-pressed={S.chips!.multi ? !!S.chips!.sel?.includes(it.val) : undefined} onClick={() => void chip(it.val, it.label)}>{it.label}</button>
                   ))}
-                  {S.chips?.multi && !T.busy && <button className="chip done" disabled={!(S.chips.sel?.length) && !["protect", "help"].includes(S.phase)} onClick={() => void done()}>Done</button>}
+                  {S.chips?.multi && !T.busy && (
+                    <>
+                      <span className="rowbreak" />
+                      <button className="chip done" disabled={!(S.chips.sel?.length) && !["protect", "help"].includes(S.phase)} onClick={() => void done()}>Done →</button>
+                    </>
+                  )}
                 </div>
                 <form className="composer" onSubmit={(e) => { e.preventDefault(); const v = input.trim(); if (!v || T.busy) return; setInput(""); void submit(v, true); }} autoComplete="off">
                   <input id="studio-input" type="text" aria-label="Your answer" value={input} onChange={(e) => setInput(e.target.value)} disabled={!typing || T.busy || S.plan} placeholder={S.chips?.addOwn ? "Or add your own" : typing ? "Type your answer, or pick one" : "Pick an option above"} />
