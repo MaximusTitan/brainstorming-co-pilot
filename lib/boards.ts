@@ -1,6 +1,6 @@
 "use client";
 import { getSupabase } from "./supabase-browser";
-import type { Session } from "./types";
+import { migrate, type Session } from "./types";
 
 export type BoardRow = { id: string; title: string; updated_at: string };
 
@@ -26,7 +26,7 @@ export async function loadBoard(id: string): Promise<Session | null> {
   if (!db) return null;
   const { data, error } = await db.from("boards").select("data").eq("id", id).maybeSingle();
   if (error) throw error;
-  return (data?.data as Session) ?? null;
+  return data?.data ? migrate(data.data) : null;
 }
 
 export async function deleteBoard(id: string) {

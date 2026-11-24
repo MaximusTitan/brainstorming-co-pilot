@@ -2,7 +2,7 @@
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useState } from "react";
 import { saveBoard } from "./boards";
-import { emptySession, type Session } from "./types";
+import { emptySession, migrate, type Session } from "./types";
 
 const KEY = "idea-pal-session-v1";
 
@@ -18,7 +18,7 @@ export function useSession(user: User | null) {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const s = { ...emptySession, ...JSON.parse(raw) } as Session;
+        const s = migrate(JSON.parse(raw));
         setSession({ ...s, id: s.id || crypto.randomUUID() });
       }
     } catch {}
@@ -31,7 +31,7 @@ export function useSession(user: User | null) {
     try {
       localStorage.setItem(KEY, JSON.stringify(session));
     } catch {}
-    if (!user || !session.id || !(session.topic || session.ideas.length)) return;
+    if (!user || !session.id || !(session.topic && session.msgs.length)) return;
     const t = setTimeout(() => {
       saveBoard(session).then(
         () => setSaveError(null),

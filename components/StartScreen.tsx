@@ -2,15 +2,9 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { deleteBoard, listBoards, type BoardRow } from "@/lib/boards";
-import type { ProjectType } from "@/lib/types";
 import { Button, Header, TextWithMic } from "./ui";
 
-const TYPES: { t: ProjectType; icon: string; cls: string }[] = [
-  { t: "Story", icon: "📖", cls: "bg-sky-200 border-sky-400" },
-  { t: "Science project", icon: "🔬", cls: "bg-green-200 border-green-400" },
-  { t: "Invention", icon: "💡", cls: "bg-yellow-200 border-yellow-400" },
-  { t: "Event", icon: "🎉", cls: "bg-pink-200 border-pink-400" },
-];
+const IDEAS = ["Help kids learn when there is no electricity", "A bag that reminds me of my homework", "Save water at our school", "A game that teaches fractions"];
 
 export function StartScreen({
   onStart,
@@ -23,12 +17,11 @@ export function StartScreen({
   user: User | null;
   onSignOut: () => void;
   onOpenBoard: (id: string) => void;
-  onStart: (topic: string, type: ProjectType) => void;
+  onStart: (topic: string) => void;
   hasSaved: boolean;
   onContinue: () => void;
 }) {
   const [topic, setTopic] = useState("");
-  const [type, setType] = useState<ProjectType>("Invention");
   const [boards, setBoards] = useState<BoardRow[]>([]);
   const uid = user?.id;
 
@@ -54,30 +47,22 @@ export function StartScreen({
         }
       />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 flex flex-col gap-6">
-        <h1 className="text-3xl sm:text-4xl font-bold text-center">What do you want to think about?</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-center">What do you want to make or change?</h1>
+        <p className="text-center text-stone-600 text-lg">Tell Pip. Together you will work out what it takes to make it real.</p>
         <TextWithMic
           value={topic}
           onChange={setTopic}
-          onSubmit={() => topic.trim() && onStart(topic.trim(), type)}
-          placeholder={'Type or say anything, like "a gadget to help me remember my homework"…'}
+          onSubmit={() => topic.trim() && onStart(topic.trim())}
+          placeholder={'Type or say anything, like "help kids keep learning without electricity"…'}
         />
-        <p className="font-medium">Or pick a project type</p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {TYPES.map(({ t, icon, cls }) => (
-            <button
-              key={t}
-              onClick={() => setType(t)}
-              className={`rounded-2xl border-2 p-4 text-center font-semibold transition ${cls} ${type === t ? "ring-4 ring-orange-400 scale-105" : ""}`}
-            >
-              <div className="text-4xl mb-1">{icon}</div>
-              {t}
-            </button>
+        <div className="flex flex-wrap gap-2 justify-center">
+          {IDEAS.map((i) => (
+            <button key={i} onClick={() => setTopic(i)} className="rounded-full border-2 border-yellow-400 bg-yellow-100 px-3 py-1 text-sm font-medium hover:bg-yellow-200">{i}</button>
           ))}
         </div>
-        <Button className="self-center text-lg" disabled={!topic.trim()} onClick={() => onStart(topic.trim(), type)}>
-          Let&apos;s think! 🧠
+        <Button className="self-center text-lg" disabled={!topic.trim()} onClick={() => onStart(topic.trim())}>
+          Let&apos;s build it! 🧠
         </Button>
-        <p className="text-center text-sm text-stone-500">Not sure? Just tell me anything!</p>
         {shown.length > 0 && (
           <section className="mt-4">
             <h2 className="font-bold mb-2">My saved boards</h2>

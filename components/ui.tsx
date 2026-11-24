@@ -1,16 +1,6 @@
 "use client";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import type { CardColor } from "@/lib/types";
-
-export const cardBg: Record<CardColor, string> = {
-  yellow: "bg-yellow-200 border-yellow-400",
-  green: "bg-green-200 border-green-400",
-  blue: "bg-sky-200 border-sky-400",
-  purple: "bg-violet-200 border-violet-400",
-  pink: "bg-pink-200 border-pink-400",
-  orange: "bg-orange-200 border-orange-400",
-};
 
 export function Button({
   variant = "primary",

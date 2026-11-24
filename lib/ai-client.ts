@@ -1,57 +1,49 @@
-import type { Doc, ProjectType } from "./types";
+import type { ArtEl, Block, Extras } from "./types";
 
-async function call<T>(payload: object): Promise<T> {
-  const res = await fetch("/api/ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+type Ctx = {
+  topic: string;
+  world: string[];
+  idea: string;
+  block?: { label: string; why?: string };
+  choice?: string;
+  chosen?: { block: string; choice: string }[];
+  remaining?: number;
+};
+
+async function post<T>(url: string, payload: object): Promise<T> {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? "Something went wrong");
   return data as T;
 }
+const coach = <T,>(step: string, ctx: Ctx) => post<T>("/api/coach", { step, ...ctx });
 
-export const askChat = (p: {
-  topic: string;
-  type: ProjectType;
-  history: { role: string; text: string }[];
-  pinned: string[];
-}) => call<{ reply: string; ideas: string[] }>({ action: "chat", ...p });
+export const coachBlocks = (c: Ctx) => coach<{ intro: string; blocks: Block[]; pickCount: number }>("blocks", c);
+export const coachOptions = (c: Ctx) => coach<{ prompt: string; options: string[] }>("options", c);
+export const coachReact = (c: Ctx) => coach<{ reaction: string; deeper: { label: string; why: string } | null }>("react", c);
+export const coachExtras = (c: Ctx) => coach<Extras>("extras", c);
 
-export const askRefine = (p: { topic: string; idea: string }) =>
-  call<{ questions: { what: string; why: string; how: string }; hint: string }>({
-    action: "refine",
-    ...p,
-  });
+/** Rough line art from the model, cleaned so only safe, in-bounds shapes reach the page. */
+export async function coachSketch(c: Ctx): Promise<ArtEl[]> {
+  const { elements } = await coach<{ elements: Record<string, unknown>[] }>("sketch", c);
+  const n = (v: unknown, lo: number, hi: number) => (typeof v === "number" && isFinite(v) ? Math.max(lo, Math.min(hi, v)) : undefined);
+  const out: ArtEl[] = [];
+  for (const e of elements.slice(0, 32)) {
+    const k = e.k as ArtEl["k"];
+    const a = e.a === true;
+    if (k === "path" && typeof e.d === "string" && e.d.length < 700 && /^[MmLlHhVvCcSsQqTtZz0-9eE.,\s-]+$/.test(e.d)) out.push({ k, d: e.d, a });
+    else if (k === "rect") out.push({ k, x: n(e.x, 0, 400), y: n(e.y, 0, 320), w: n(e.w, 1, 400), h: n(e.h, 1, 320), a });
+    else if (k === "circle") out.push({ k, x: n(e.x, 0, 400), y: n(e.y, 0, 320), r: n(e.r, 1, 160), a });
+    else if (k === "line") out.push({ k, x: n(e.x, 0, 400), y: n(e.y, 0, 320), x2: n(e.x2, 0, 400), y2: n(e.y2, 0, 320), a });
+    else if (k === "text" && typeof e.t === "string") out.push({ k, x: n(e.x, 0, 380), y: n(e.y, 12, 316), t: e.t.slice(0, 28) });
+  }
+  return out;
+}
 
-export const askDocument = (p: {
-  topic: string;
-  idea: string;
-  answers: { what: string; why: string; how: string };
-}) => call<Doc>({ action: "document", ...p });
-
-export type HelperReply = {
-  reply: string;
-  suggestion: { field: "what" | "why" | "how"; text: string } | null;
-};
-
-export const askHelper = (p: {
-  topic: string;
-  idea: string;
-  answers: { what: string; why: string; how: string };
-  history: { role: string; text: string }[];
-}) => call<HelperReply>({ action: "helper", ...p });
-
-/** Generates a picture, then shrinks it so it stays small enough to save with the document. */
+/** Generates a picture, then shrinks it so it stays small enough to save with the plan. */
 export async function askImage(p: { title: string; bigIdea: string }): Promise<string> {
-  const res = await fetch("/api/imagine", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(p),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? "Could not make the picture");
-  return shrink(data.image as string, 640);
+  const data = await post<{ image: string }>("/api/imagine", p);
+  return shrink(data.image, 640);
 }
 
 function shrink(src: string, size: number): Promise<string> {
