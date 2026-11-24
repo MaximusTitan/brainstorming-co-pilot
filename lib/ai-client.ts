@@ -40,8 +40,8 @@ export async function coachSketch(c: Ctx): Promise<ArtEl[]> {
   return out;
 }
 
-/** Generates a picture, then shrinks it so it stays small enough to save with the plan. */
-export async function askImage(p: { title: string; bigIdea: string }): Promise<string> {
+/** Turns the sketch (when given) into a finished picture, then shrinks it so it stays small enough to save with the plan. */
+export async function askImage(p: { title: string; bigIdea: string; sketch?: string }): Promise<string> {
   const data = await post<{ image: string }>("/api/imagine", p);
   return shrink(data.image, 640);
 }

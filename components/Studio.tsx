@@ -2,6 +2,7 @@
 /* eslint-disable react-hooks/immutability */
 import Image from "next/image";
 import { Fragment, useEffect, useReducer, useRef, useState } from "react";
+import { composeSketch } from "@/lib/sketch";
 import { askImage, coachBlocks, coachExtras, coachOptions, coachReact, coachSketch } from "@/lib/ai-client";
 import type { Chips, Note, NoteKind, Phase, Session } from "@/lib/types";
 import { Header } from "./ui";
@@ -44,6 +45,7 @@ export function Studio({
   const [view, setView] = useState<"chat" | "canvas" | "sketch">("chat");
   const [tool, setTool] = useState<"pen" | "erase">("pen");
   const [color, setColor] = useState("ink");
+  const [skView, setSkView] = useState<"sketch" | "picture">("sketch");
   const [narrow, setNarrow] = useState(false);
   const [input, setInput] = useState("");
   const msgsRef = useRef<HTMLDivElement>(null);
@@ -280,11 +282,14 @@ export function Studio({
     return `# ${idea.text}\n\nFor: ${S.topic}\nWorld: ${S.world.join(", ")}\n\n## What it takes\n${takes}\n\n## To make it last\n${extras || "-"}\n\n## Smallest first version\n${S.smallest}\n\n## Who can help\n${S.helpers.join(", ") || "-"}\n`;
   };
   async function imagine() {
+    if (T.imagining || S.idea == null) return;
     T.imagining = true; T.imgErr = ""; force();
     try {
-      const idea = note(S.idea!);
-      S.image = await askImage({ title: idea.text, bigIdea: `${idea.text}. ${blocks().map((b) => choices(b.id).map((c) => c.text).join(", ")).join(". ")}` });
-    } catch (e) { T.imgErr = e instanceof Error ? e.message : "Could not make the picture"; }
+      const idea = note(S.idea);
+      const sketch = S.art.length || S.strokes.length ? await composeSketch(S.art, S.strokes) : undefined;
+      S.image = await askImage({ title: idea.text, bigIdea: `${idea.text}. ${blocks().map((b) => choices(b.id).map((c) => c.text).join(", ")).join(". ")}`, sketch });
+      setSkView("picture");
+    } catch (e) { console.error(e); T.imgErr = "Pip could not make the picture this time. Try again in a moment."; }
     T.imagining = false; touch();
   }
 
@@ -310,7 +315,7 @@ export function Studio({
           <div className="legend"><span>In your words: {own}</span><span>Chosen from Pip’s options: {picked}</span><span>Ideas Pip wrote for you: 0</span></div>
         </div>
         <div className="acts">
-          <button className="btn go" onClick={imagine} disabled={T.imagining}>{T.imagining ? "Drawing…" : S.image ? "✨ Imagine again" : "✨ Imagine a picture"}</button>
+          <button className="btn go" onClick={imagine} disabled={T.imagining}>{T.imagining ? "Making your picture…" : S.image ? "✨ Make it again" : "✨ Make the final picture"}</button>
           <button className="btn" onClick={() => window.print()}>Print</button>
           <button className="btn" onClick={() => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([markdown()], { type: "text/markdown" })); a.download = `${idea.text.slice(0, 40).replace(/\W+/g, "-").toLowerCase()}.md`; a.click(); }}>Download</button>
           <button className="btn" onClick={async () => { await navigator.clipboard.writeText(markdown()); T.copied = true; force(); }}>{T.copied ? "Copied" : "Copy"}</button>
@@ -385,9 +390,16 @@ export function Studio({
 
               {S.idea != null && (
                 <aside className="sketch" aria-label="Sketch of your idea">
-                  <div className="sk-head"><b>Sketch</b><span>{T.sketching ? "Pip is sketching…" : "Pip draws the rough shape from your choices. Draw on it too."}</span></div>
+                  <div className="sk-head">
+                    <div className="sk-title"><b>{skView === "picture" && S.image ? "Final picture" : "Sketch"}</b>
+                      {S.image && <div className="sk-tabs" role="group" aria-label="Sketch or picture"><button className="tl" aria-pressed={skView === "sketch"} onClick={() => setSkView("sketch")}>Sketch</button><button className="tl" aria-pressed={skView === "picture"} onClick={() => setSkView("picture")}>Picture</button></div>}
+                    </div>
+                    <span>{skView === "picture" && S.image ? "Made from your sketch. Go back to the sketch to change it, then make it again." : T.sketching ? "Pip is sketching…" : "Pip draws the rough shape from your choices. Draw on it too."}</span>
+                  </div>
                   <div className="sk-stage">
-                    <svg className="sk-art" viewBox="0 0 400 320" role="img" aria-label="Rough line drawing of your idea">
+                    {skView === "picture" && S.image && <Image className="sk-img" src={S.image} alt={`Picture of ${note(S.idea).text}`} width={640} height={640} unoptimized />}
+                    {T.imagining && <div className="sk-busy" role="status"><b>Pip is turning your sketch into a picture…</b><span>This takes about 30 seconds.</span></div>}
+                    <svg className={`sk-art${skView === "picture" && S.image ? " off" : ""}`} viewBox="0 0 400 320" role="img" aria-label="Rough line drawing of your idea">
                       <g key={S.artV} className="dr">
                         {S.art.map((e, i) => {
                           const cls = e.a ? "sun" : undefined;
@@ -399,12 +411,22 @@ export function Studio({
                         })}
                       </g>
                     </svg>
-                    <canvas ref={drawRef} aria-label="Drawing area"
+                    <canvas ref={drawRef} className={skView === "picture" && S.image ? "off" : undefined} aria-label="Drawing area"
                       onPointerDown={(e) => { const s = { c: color, w: tool === "erase" ? 22 : 4, t: tool, pts: [pt(e)] }; stroke.current = s; S.strokes.push(s); e.currentTarget.setPointerCapture(e.pointerId); force(); }}
                       onPointerMove={(e) => { if (!stroke.current) return; stroke.current.pts.push(pt(e)); redraw(); }}
                       onPointerUp={() => { if (stroke.current) { stroke.current = null; touch(); } }} />
                   </div>
-                  <div className="sk-tools" role="toolbar" aria-label="Drawing tools">
+                  {skView === "picture" && S.image ? (
+                    <div className="sk-tools">
+                      <button className="btn go" disabled={T.imagining} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make it again"}</button>
+                      <button className="tl" onClick={() => setSkView("sketch")}>Back to my sketch</button>
+                      {T.imgErr && <p className="err">{T.imgErr}</p>}
+                    </div>
+                  ) : (
+                    <div className="sk-tools" role="toolbar" aria-label="Drawing tools">
+                      <button className="btn go sk-make" disabled={T.imagining || !S.art.length} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make the final picture"}</button>
+                      <div className="sk-break" />
+
                     <button className="tl" aria-pressed={tool === "pen"} onClick={() => setTool("pen")}>✎ Pen</button>
                     <button className="tl" aria-pressed={tool === "erase"} onClick={() => setTool("erase")}>Eraser</button>
                     {SWATCHES.map((s) => <button key={s.v} className="sw" aria-label={s.name} aria-pressed={color === s.v} style={{ background: s.bg }} onClick={() => { setColor(s.v); setTool("pen"); }} />)}
@@ -412,6 +434,7 @@ export function Studio({
                     <button className="tl" onClick={() => { S.strokes = []; touch(); }}>Clear my drawing</button>
                     <button className="tl" disabled={T.sketching} onClick={() => void sketch()}>{T.sketchErr ? "Try Pip’s sketch again" : "Redraw Pip’s sketch"}</button>
                   </div>
+                  )}
                 </aside>
               )}
             </section>

@@ -136,3 +136,14 @@
 .studio .err { color: var(--bad); font-size: 14px; }
 .studio .note.kid.mine { box-shadow: 0 6px 14px rgba(0,0,0,.18), 0 0 0 2px var(--accent); }
 @media print { .studio .chat, .studio .sketch, .studio .acts { display: none; } }
+
+.studio .sk-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.studio .sk-tabs { display: flex; gap: 4px; }
+.studio .sk-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border-radius: 12px; background: #fff; }
+.studio .sk-stage .off { display: none; }
+.studio .sk-busy { position: absolute; inset: 0; z-index: 3; display: grid; place-content: center; text-align: center; gap: 4px; background: color-mix(in srgb, var(--panel) 88%, transparent); border-radius: 12px; padding: 16px; animation: pulse 1.6s ease-in-out infinite; }
+.studio .sk-busy b { font: 600 18px var(--display); }
+.studio .sk-busy span { color: var(--muted); font-size: 14px; }
+@keyframes pulse { 50% { opacity: .75; } }
+.studio .sk-make { flex-basis: 100%; }
+.studio .sk-break { display: none; }
