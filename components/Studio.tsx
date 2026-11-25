@@ -203,7 +203,10 @@ export function Studio({
     const c = S.chips, sel = c.sel ?? [], ph = S.phase;
     if (ph === "rules") {
       if (!sel.length) return;
-      S.world = c.items.filter((i) => sel.includes(i.val)).map((i) => i.label); you(S.world.join(", ")); touch(); return ask("idea");
+      S.world = c.items.filter((i) => sel.includes(i.val)).map((i) => i.label); you(S.world.join(", "));
+      // What they typed on the start screen is the idea: no need to ask for it again.
+      S.idea = addNote("idea", S.topic, true, { rot: -2 }).id; touch(); void sketch();
+      return ask("pick");
     }
     if (ph === "pick") {
       if (!sel.length) return;
