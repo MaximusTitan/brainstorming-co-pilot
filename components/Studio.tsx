@@ -3,12 +3,11 @@
 import Image from "next/image";
 import { Fragment, useEffect, useReducer, useRef, useState } from "react";
 import { composeSketch } from "@/lib/sketch";
-import { askImage, coachBlocks, coachExtras, coachOptions, coachReact, coachSketch } from "@/lib/ai-client";
+import { askImage, coachBlocks, coachWorld, coachExtras, coachOptions, coachReact, coachSketch } from "@/lib/ai-client";
 import type { Chips, Note, NoteKind, Phase, Session } from "@/lib/types";
 import { Header } from "./ui";
 import "./studio.css";
 
-const WORLD = ["No electricity", "No internet", "Very low cost", "Easy to carry", "Safe and quiet", "Many kids share"];
 const COLORS = ["n1", "n2", "n3", "n4", "n5"];
 const SWATCHES: { v: string; name: string; bg: string }[] = [
   { v: "ink", name: "Ink", bg: "#0f2742" },
@@ -100,7 +99,10 @@ export function Studio({
   async function ask(phase: Phase, pre = ""): Promise<void> {
     S.phase = phase;
     const again = () => ask(phase, pre);
-    if (phase === "rules") return pip(`That matters. First, tell me about the world it has to work in. **Which of these are true?** You can add your own.`, { multi: true, sel: [], addOwn: true, items: WORLD.map((w) => ({ label: w, val: w })) });
+    if (phase === "rules") return guard(again, async () => {
+      const r = await coachWorld(S.topic);
+      await pip(`${r.intro} **Which of these are true?** You can add your own.`, { multi: true, sel: [], addOwn: true, items: r.conditions.slice(0, 6).map((w) => ({ label: w, val: w })) }, 0);
+    });
     if (phase === "idea") return pip("Thanks, now I can help you properly. **What is your idea?** A rough sentence is perfect.");
     if (phase === "pick") return guard(again, async () => {
       const r = await coachBlocks(ctx());

@@ -18,6 +18,7 @@ async function post<T>(url: string, payload: object): Promise<T> {
 }
 const coach = <T,>(step: string, ctx: Ctx) => post<T>("/api/coach", { step, ...ctx });
 
+export const coachWorld = (topic: string) => post<{ intro: string; conditions: string[] }>("/api/coach", { step: "world", topic, world: [], idea: "" });
 export const coachBlocks = (c: Ctx) => coach<{ intro: string; blocks: Block[]; pickCount: number }>("blocks", c);
 export const coachOptions = (c: Ctx) => coach<{ prompt: string; options: string[] }>("options", c);
 export const coachReact = (c: Ctx) => coach<{ reaction: string; deeper: { label: string; why: string } | null }>("react", c);
