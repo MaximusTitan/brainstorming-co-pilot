@@ -7,7 +7,7 @@
   color-scheme: light;
   --display: var(--font-fredoka), 'Trebuchet MS', system-ui, sans-serif; --body: var(--font-nunito), system-ui, sans-serif;
   font-family: var(--body); color: var(--fg); background: var(--bg); font-size: 17px; line-height: 1.5;
-  height: calc(100dvh - 58px); min-height: 520px;
+  height: calc(100dvh - 58px - 57px); min-height: 520px;
 }
 .studio .app { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); }
 .studio .bar { display: flex; align-items: center; gap: 12px; padding-block: 12px; flex-wrap: wrap; }

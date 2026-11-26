@@ -31,7 +31,7 @@ export function useSession(user: User | null) {
     try {
       localStorage.setItem(KEY, JSON.stringify(session));
     } catch {}
-    if (!user || !session.id || !(session.topic && session.msgs.length)) return;
+    if (!user || !session.id || !(session.topic && (session.msgs.length || session.sparks.length || session.seed))) return;
     const t = setTimeout(() => {
       saveBoard(session).then(
         () => setSaveError(null),

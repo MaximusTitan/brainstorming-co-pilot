@@ -48,7 +48,7 @@ export function StartScreen({
       />
       <main className="mx-auto w-full max-w-2xl flex-1 px-5 py-10 flex flex-col gap-6">
         <h1 className="text-3xl sm:text-4xl font-bold text-center">What do you want to make or change?</h1>
-        <p className="text-center text-stone-600 text-lg">Tell Pip. Together you will work out what it takes to make it real.</p>
+        <p className="text-center text-stone-600 text-lg">Tell Pip. First find an idea you love, then work out what it takes to make it real.</p>
         <TextWithMic
           value={topic}
           onChange={setTopic}
@@ -61,7 +61,7 @@ export function StartScreen({
           ))}
         </div>
         <Button className="self-center text-lg" disabled={!topic.trim()} onClick={() => onStart(topic.trim())}>
-          Let&apos;s build it! 🧠
+          Let&apos;s start! 🧠
         </Button>
         {shown.length > 0 && (
           <section className="mt-4">

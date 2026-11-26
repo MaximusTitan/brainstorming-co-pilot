@@ -5,7 +5,6 @@ import { Fragment, useEffect, useReducer, useRef, useState } from "react";
 import { composeSketch } from "@/lib/sketch";
 import { askImage, coachBlocks, coachWorld, coachExtras, coachOptions, coachReact, coachSketch } from "@/lib/ai-client";
 import type { Chips, Note, NoteKind, Phase, Session } from "@/lib/types";
-import { Header } from "./ui";
 import "./studio.css";
 
 const COLORS = ["n1", "n2", "n3", "n4", "n5"];
@@ -27,17 +26,10 @@ function Rich({ text }: { text: string }) {
   );
 }
 
-export function Studio({
-  session,
-  onChange,
-  onHome,
-  right,
-}: {
-  session: Session;
-  onChange: (s: Session) => void;
-  onHome: () => void;
-  right?: React.ReactNode;
-}) {
+const ORIGIN = { you: "yours", pip: "suggested by Pip", remix: "Pip’s, remixed by you" };
+
+/** Part 2: shapes the chosen idea (`session.seed`) with Pip. */
+export function Studio({ session, onChange }: { session: Session; onChange: (s: Session) => void }) {
   const [S] = useState<Session>(() => structuredClone(session));
   const [T] = useState({ busy: false, sketching: false, sketchErr: false, imagining: false, imgErr: "", retry: null as null | (() => void), copied: false });
   const [, force] = useReducer((x: number) => x + 1, 0);
@@ -123,7 +115,8 @@ export function Studio({
     if (phase === "help") return pip("Nobody builds alone. **Who could help you?**", { multi: true, sel: [], addOwn: true, items: (S.extras?.helpers ?? []).map((o) => ({ label: o, val: o })) });
     if (phase === "done") {
       S.plan = true; S.planView = true;
-      await pip("Here is your plan. You came up with the idea and made every choice. I suggested what it takes, and **you decided**. Your sketch stays on the canvas. Keep drawing, then go and make the first one.", null, 300);
+      const origin = S.seed?.from === "pip" ? "You chose the idea" : S.seed?.from === "remix" ? "You made the idea your own" : "You came up with the idea";
+      await pip(`Here is your plan. ${origin} and made every choice. I suggested what it takes, and **you decided**. Your sketch stays on the canvas. Keep drawing, then go and make the first one.`, null, 300);
       void sketch();
     }
   }
@@ -149,6 +142,13 @@ export function Studio({
   async function nextBlock(pre = ""): Promise<void> {
     if (!S.queue.length) return ask("protect", pre);
     S.blk = S.queue.shift()!; return ask("shape", pre);
+  }
+
+  /** Puts the idea being built on the canvas, then asks which parts to shape. */
+  function startIdea() {
+    S.idea = addNote("idea", S.seed?.text ?? S.topic, S.seed?.from !== "pip", { rot: -2 }).id;
+    touch(); void sketch();
+    return ask("pick");
   }
 
   /* ---------- answers ---------- */
@@ -204,9 +204,7 @@ export function Studio({
     if (ph === "rules") {
       if (!sel.length) return;
       S.world = c.items.filter((i) => sel.includes(i.val)).map((i) => i.label); you(S.world.join(", "));
-      // What they typed on the start screen is the idea: no need to ask for it again.
-      S.idea = addNote("idea", S.topic, true, { rot: -2 }).id; touch(); void sketch();
-      return ask("pick");
+      return startIdea();
     }
     if (ph === "pick") {
       if (!sel.length) return;
@@ -228,7 +226,8 @@ export function Studio({
   /* ---------- lifecycle ---------- */
   useEffect(() => {
     if (started.current) return; started.current = true;
-    if (!S.msgs.length) void ask("rules");
+    // Conditions picked in Part 1 carry over, so they are only asked here when there are none.
+    if (!S.msgs.length && S.idea == null) void (S.world.length ? startIdea() : ask("rules"));
     else if (!S.chips && !["idea", "smallest", "done"].includes(S.phase) && S.phase !== "deeper") void ask(S.phase);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -316,8 +315,8 @@ export function Studio({
         <div className="two"><div><small>Smallest first version</small><p>{S.smallest}</p></div><div><small>Who can help</small><p>{S.helpers.join(", ") || "Find one person this week"}</p></div></div>
         <div>
           <small>Whose thinking is this?</small>
-          <div className="meter" role="img" aria-label={`${own} in your own words, ${picked} chosen from Pip's options, 0 written by Pip`}><i className="a" style={{ width: `${(own / total) * 100}%` }} /><i className="c" style={{ width: `${(picked / total) * 100}%` }} /></div>
-          <div className="legend"><span>In your words: {own}</span><span>Chosen from Pip’s options: {picked}</span><span>Ideas Pip wrote for you: 0</span></div>
+          <div className="meter" role="img" aria-label={`${own} in your own words, ${picked} chosen from Pip's suggestions`}><i className="a" style={{ width: `${(own / total) * 100}%` }} /><i className="c" style={{ width: `${(picked / total) * 100}%` }} /></div>
+          <div className="legend"><span>In your words: {own}</span><span>Chosen from Pip’s options: {picked}</span><span>Starting idea: {ORIGIN[S.seed?.from ?? "you"]}</span></div>
         </div>
         <div className="acts">
           <button className="btn go" onClick={imagine} disabled={T.imagining}>{T.imagining ? "Making your picture…" : S.image ? "✨ Make it again" : "✨ Make the final picture"}</button>
@@ -332,120 +331,117 @@ export function Studio({
   };
 
   return (
-    <>
-      <Header onHome={onHome} right={right} />
-      <div className="studio" data-view={view}>
-        <div className="app" data-view={view}>
-          <div className="bar">
-            <div className="tabs" role="group" aria-label="View">
-              {(["chat", "canvas", "sketch"] as const).map((v) => <button key={v} className="btn" aria-pressed={view === v} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>)}
-            </div>
-            <div className="sp" />
+    <div className="studio" data-view={view}>
+      <div className="app" data-view={view}>
+        <div className="bar">
+          <div className="tabs" role="group" aria-label="View">
+            {(["chat", "canvas", "sketch"] as const).map((v) => <button key={v} className="btn" aria-pressed={view === v} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>)}
           </div>
-          <div className="split">
-            <section className="chat" aria-label="Chat with Pip">
-              <div className="msgs" ref={msgsRef} aria-live="polite">
-                {S.msgs.map((m, i) => (
-                  <div key={i} className={`m ${m.who === "you" ? "you" : ""}`}>
-                    {m.who === "pip" && <div className="av" aria-hidden>🦉</div>}
-                    <div className="b"><Rich text={m.text} /></div>
-                  </div>
-                ))}
-                {T.busy && <div className="m"><div className="av" aria-hidden>🦉</div><div className="b typing"><i /><i /><i /></div></div>}
-              </div>
-              <div className="foot">
-                <div className="chips">
-                  {S.chips && !T.busy && S.chips.items.map((it) => (
-                    <button key={it.val} className="chip" aria-pressed={S.chips!.multi ? !!S.chips!.sel?.includes(it.val) : undefined} onClick={() => void chip(it.val, it.label)}>{it.label}</button>
-                  ))}
-                  {S.chips?.multi && !T.busy && (
-                    <>
-                      <span className="rowbreak" />
-                      <button className="chip done" disabled={!(S.chips.sel?.length) && !["protect", "help"].includes(S.phase)} onClick={() => void done()}>Done →</button>
-                    </>
-                  )}
+          <div className="sp" />
+        </div>
+        <div className="split">
+          <section className="chat" aria-label="Chat with Pip">
+            <div className="msgs" ref={msgsRef} aria-live="polite">
+              {S.msgs.map((m, i) => (
+                <div key={i} className={`m ${m.who === "you" ? "you" : ""}`}>
+                  {m.who === "pip" && <div className="av" aria-hidden>🦉</div>}
+                  <div className="b"><Rich text={m.text} /></div>
                 </div>
-                <form className="composer" onSubmit={(e) => { e.preventDefault(); const v = input.trim(); if (!v || T.busy) return; setInput(""); void submit(v, true); }} autoComplete="off">
-                  <input id="studio-input" type="text" aria-label="Your answer" value={input} onChange={(e) => setInput(e.target.value)} disabled={!typing || T.busy || S.plan} placeholder={S.chips?.addOwn ? "Or add your own" : typing ? "Type your answer, or pick one" : "Pick an option above"} />
-                  <button disabled={!typing || T.busy || S.plan || !input.trim()} aria-label="Send">Send</button>
-                </form>
-              </div>
-            </section>
-
-            <section className="canvas" ref={canvasRef} aria-label="Idea canvas">
-              <div className="layer">
-                {S.plan && S.planView ? plan() : (
+              ))}
+              {T.busy && <div className="m"><div className="av" aria-hidden>🦉</div><div className="b typing"><i /><i /><i /></div></div>}
+            </div>
+            <div className="foot">
+              <div className="chips">
+                {S.chips && !T.busy && S.chips.items.map((it) => (
+                  <button key={it.val} className="chip" aria-pressed={S.chips!.multi ? !!S.chips!.sel?.includes(it.val) : undefined} onClick={() => void chip(it.val, it.label)}>{it.label}</button>
+                ))}
+                {S.chips?.multi && !T.busy && (
                   <>
-                    <div className="core"><small>What you want to change</small><h2>{S.topic}</h2>{S.world.length > 0 && <div className="pins">{S.world.map((w) => <span key={w} className="pin">{w}</span>)}</div>}</div>
-                    <svg className="links" aria-hidden>
-                      {S.notes.filter((n) => n.parent && S.notes.some((p) => p.id === n.parent)).map((n) => { const p = note(n.parent!); return <line key={n.id} x1={`${p.x * zx()}%`} y1={`${p.y}%`} x2={`${n.x * zx()}%`} y2={`${n.y}%`} stroke="var(--muted)" strokeWidth={n.kind === "choice" ? 2 : 3} strokeLinecap="round" opacity={0.7} />; })}
-                    </svg>
-                    {S.notes.map((n) => (
-                      <div key={n.id} className={`note ${n.kind === "idea" ? "main" : "kid"} pop`} style={{ left: `${n.x * zx()}%`, top: `${n.y}%`, ["--r" as string]: `${n.rot}deg`, background: `var(--${n.c})` }} onPointerDown={(e) => noteDown(e, n.id)} onPointerMove={noteMove} onPointerUp={noteUp}>
-                        <small>{TAG[n.kind]}{n.own ? "" : " · from Pip"}</small>{n.text}
-                      </div>
-                    ))}
-                    {S.idea && !S.plan && blocks().length > 0 && ["pick", "shape", "protect", "deeper"].includes(S.phase) && (
-                      <div className="cov"><b>Your build list</b>{blocks().map((b) => { const y = choices(b.id).length > 0; return <div key={b.id} className={y ? "y" : ""}><i>{y ? "✓" : ""}</i>{b.text}</div>; })}<p>Pip decides when it is enough.</p></div>
-                    )}
-                    {S.plan && <button className="btn go seeplan" onClick={() => { S.planView = true; touch(); }}>See my plan</button>}
+                    <span className="rowbreak" />
+                    <button className="chip done" disabled={!(S.chips.sel?.length) && !["protect", "help"].includes(S.phase)} onClick={() => void done()}>Done →</button>
                   </>
                 )}
               </div>
+              <form className="composer" onSubmit={(e) => { e.preventDefault(); const v = input.trim(); if (!v || T.busy) return; setInput(""); void submit(v, true); }} autoComplete="off">
+                <input id="studio-input" type="text" aria-label="Your answer" value={input} onChange={(e) => setInput(e.target.value)} disabled={!typing || T.busy || S.plan} placeholder={S.chips?.addOwn ? "Or add your own" : typing ? "Type your answer, or pick one" : "Pick an option above"} />
+                <button disabled={!typing || T.busy || S.plan || !input.trim()} aria-label="Send">Send</button>
+              </form>
+            </div>
+          </section>
 
-              {S.idea != null && (
-                <aside className="sketch" aria-label="Sketch of your idea">
-                  <div className="sk-head">
-                    <div className="sk-title"><b>{skView === "picture" && S.image ? "Final picture" : "Sketch"}</b>
-                      {S.image && <div className="sk-tabs" role="group" aria-label="Sketch or picture"><button className="tl" aria-pressed={skView === "sketch"} onClick={() => setSkView("sketch")}>Sketch</button><button className="tl" aria-pressed={skView === "picture"} onClick={() => setSkView("picture")}>Picture</button></div>}
+          <section className="canvas" ref={canvasRef} aria-label="Idea canvas">
+            <div className="layer">
+              {S.plan && S.planView ? plan() : (
+                <>
+                  <div className="core"><small>What you want to change</small><h2>{S.topic}</h2>{S.world.length > 0 && <div className="pins">{S.world.map((w) => <span key={w} className="pin">{w}</span>)}</div>}</div>
+                  <svg className="links" aria-hidden>
+                    {S.notes.filter((n) => n.parent && S.notes.some((p) => p.id === n.parent)).map((n) => { const p = note(n.parent!); return <line key={n.id} x1={`${p.x * zx()}%`} y1={`${p.y}%`} x2={`${n.x * zx()}%`} y2={`${n.y}%`} stroke="var(--muted)" strokeWidth={n.kind === "choice" ? 2 : 3} strokeLinecap="round" opacity={0.7} />; })}
+                  </svg>
+                  {S.notes.map((n) => (
+                    <div key={n.id} className={`note ${n.kind === "idea" ? "main" : "kid"} pop`} style={{ left: `${n.x * zx()}%`, top: `${n.y}%`, ["--r" as string]: `${n.rot}deg`, background: `var(--${n.c})` }} onPointerDown={(e) => noteDown(e, n.id)} onPointerMove={noteMove} onPointerUp={noteUp}>
+                      <small>{TAG[n.kind]}{n.own ? "" : " · from Pip"}</small>{n.text}
                     </div>
-                    <span>{skView === "picture" && S.image ? "Made from your sketch. Go back to the sketch to change it, then make it again." : T.sketching ? "Pip is sketching…" : "Pip draws the rough shape from your choices. Draw on it too."}</span>
-                  </div>
-                  <div className="sk-stage">
-                    {skView === "picture" && S.image && <Image className="sk-img" src={S.image} alt={`Picture of ${note(S.idea).text}`} width={640} height={640} unoptimized />}
-                    {T.imagining && <div className="sk-busy" role="status"><b>Pip is turning your sketch into a picture…</b><span>This takes about 30 seconds.</span></div>}
-                    <svg className={`sk-art${skView === "picture" && S.image ? " off" : ""}`} viewBox="0 0 400 320" role="img" aria-label="Rough line drawing of your idea">
-                      <g key={S.artV} className="dr">
-                        {S.art.map((e, i) => {
-                          const cls = e.a ? "sun" : undefined;
-                          if (e.k === "path") return <path key={i} pathLength={1} d={e.d} className={cls} />;
-                          if (e.k === "rect") return <rect key={i} pathLength={1} x={e.x} y={e.y} width={e.w} height={e.h} className={cls} />;
-                          if (e.k === "circle") return <circle key={i} pathLength={1} cx={e.x} cy={e.y} r={e.r} className={cls} />;
-                          if (e.k === "line") return <line key={i} pathLength={1} x1={e.x} y1={e.y} x2={e.x2} y2={e.y2} className={cls} />;
-                          return <text key={i} x={e.x} y={e.y}>{e.t}</text>;
-                        })}
-                      </g>
-                    </svg>
-                    <canvas ref={drawRef} className={skView === "picture" && S.image ? "off" : undefined} aria-label="Drawing area"
-                      onPointerDown={(e) => { const s = { c: color, w: tool === "erase" ? 22 : 4, t: tool, pts: [pt(e)] }; stroke.current = s; S.strokes.push(s); e.currentTarget.setPointerCapture(e.pointerId); force(); }}
-                      onPointerMove={(e) => { if (!stroke.current) return; stroke.current.pts.push(pt(e)); redraw(); }}
-                      onPointerUp={() => { if (stroke.current) { stroke.current = null; touch(); } }} />
-                  </div>
-                  {skView === "picture" && S.image ? (
-                    <div className="sk-tools">
-                      <button className="btn go" disabled={T.imagining} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make it again"}</button>
-                      <button className="tl" onClick={() => setSkView("sketch")}>Back to my sketch</button>
-                      {T.imgErr && <p className="err">{T.imgErr}</p>}
-                    </div>
-                  ) : (
-                    <div className="sk-tools" role="toolbar" aria-label="Drawing tools">
-                      <button className="btn go sk-make" disabled={T.imagining || !S.art.length} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make the final picture"}</button>
-                      <div className="sk-break" />
-
-                    <button className="tl" aria-pressed={tool === "pen"} onClick={() => setTool("pen")}>✎ Pen</button>
-                    <button className="tl" aria-pressed={tool === "erase"} onClick={() => setTool("erase")}>Eraser</button>
-                    {SWATCHES.map((s) => <button key={s.v} className="sw" aria-label={s.name} aria-pressed={color === s.v} style={{ background: s.bg }} onClick={() => { setColor(s.v); setTool("pen"); }} />)}
-                    <button className="tl" onClick={() => { S.strokes.pop(); touch(); }}>Undo</button>
-                    <button className="tl" onClick={() => { S.strokes = []; touch(); }}>Clear my drawing</button>
-                    <button className="tl" disabled={T.sketching} onClick={() => void sketch()}>{T.sketchErr ? "Try Pip’s sketch again" : "Redraw Pip’s sketch"}</button>
-                  </div>
+                  ))}
+                  {S.idea && !S.plan && blocks().length > 0 && ["pick", "shape", "protect", "deeper"].includes(S.phase) && (
+                    <div className="cov"><b>Your build list</b>{blocks().map((b) => { const y = choices(b.id).length > 0; return <div key={b.id} className={y ? "y" : ""}><i>{y ? "✓" : ""}</i>{b.text}</div>; })}<p>Pip decides when it is enough.</p></div>
                   )}
-                </aside>
+                  {S.plan && <button className="btn go seeplan" onClick={() => { S.planView = true; touch(); }}>See my plan</button>}
+                </>
               )}
-            </section>
-          </div>
+            </div>
+
+            {S.idea != null && (
+              <aside className="sketch" aria-label="Sketch of your idea">
+                <div className="sk-head">
+                  <div className="sk-title"><b>{skView === "picture" && S.image ? "Final picture" : "Sketch"}</b>
+                    {S.image && <div className="sk-tabs" role="group" aria-label="Sketch or picture"><button className="tl" aria-pressed={skView === "sketch"} onClick={() => setSkView("sketch")}>Sketch</button><button className="tl" aria-pressed={skView === "picture"} onClick={() => setSkView("picture")}>Picture</button></div>}
+                  </div>
+                  <span>{skView === "picture" && S.image ? "Made from your sketch. Go back to the sketch to change it, then make it again." : T.sketching ? "Pip is sketching…" : "Pip draws the rough shape from your choices. Draw on it too."}</span>
+                </div>
+                <div className="sk-stage">
+                  {skView === "picture" && S.image && <Image className="sk-img" src={S.image} alt={`Picture of ${note(S.idea).text}`} width={640} height={640} unoptimized />}
+                  {T.imagining && <div className="sk-busy" role="status"><b>Pip is turning your sketch into a picture…</b><span>This takes about 30 seconds.</span></div>}
+                  <svg className={`sk-art${skView === "picture" && S.image ? " off" : ""}`} viewBox="0 0 400 320" role="img" aria-label="Rough line drawing of your idea">
+                    <g key={S.artV} className="dr">
+                      {S.art.map((e, i) => {
+                        const cls = e.a ? "sun" : undefined;
+                        if (e.k === "path") return <path key={i} pathLength={1} d={e.d} className={cls} />;
+                        if (e.k === "rect") return <rect key={i} pathLength={1} x={e.x} y={e.y} width={e.w} height={e.h} className={cls} />;
+                        if (e.k === "circle") return <circle key={i} pathLength={1} cx={e.x} cy={e.y} r={e.r} className={cls} />;
+                        if (e.k === "line") return <line key={i} pathLength={1} x1={e.x} y1={e.y} x2={e.x2} y2={e.y2} className={cls} />;
+                        return <text key={i} x={e.x} y={e.y}>{e.t}</text>;
+                      })}
+                    </g>
+                  </svg>
+                  <canvas ref={drawRef} className={skView === "picture" && S.image ? "off" : undefined} aria-label="Drawing area"
+                    onPointerDown={(e) => { const s = { c: color, w: tool === "erase" ? 22 : 4, t: tool, pts: [pt(e)] }; stroke.current = s; S.strokes.push(s); e.currentTarget.setPointerCapture(e.pointerId); force(); }}
+                    onPointerMove={(e) => { if (!stroke.current) return; stroke.current.pts.push(pt(e)); redraw(); }}
+                    onPointerUp={() => { if (stroke.current) { stroke.current = null; touch(); } }} />
+                </div>
+                {skView === "picture" && S.image ? (
+                  <div className="sk-tools">
+                    <button className="btn go" disabled={T.imagining} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make it again"}</button>
+                    <button className="tl" onClick={() => setSkView("sketch")}>Back to my sketch</button>
+                    {T.imgErr && <p className="err">{T.imgErr}</p>}
+                  </div>
+                ) : (
+                  <div className="sk-tools" role="toolbar" aria-label="Drawing tools">
+                    <button className="btn go sk-make" disabled={T.imagining || !S.art.length} onClick={() => void imagine()}>{T.imagining ? "Making your picture…" : "✨ Make the final picture"}</button>
+                    <div className="sk-break" />
+
+                  <button className="tl" aria-pressed={tool === "pen"} onClick={() => setTool("pen")}>✎ Pen</button>
+                  <button className="tl" aria-pressed={tool === "erase"} onClick={() => setTool("erase")}>Eraser</button>
+                  {SWATCHES.map((s) => <button key={s.v} className="sw" aria-label={s.name} aria-pressed={color === s.v} style={{ background: s.bg }} onClick={() => { setColor(s.v); setTool("pen"); }} />)}
+                  <button className="tl" onClick={() => { S.strokes.pop(); touch(); }}>Undo</button>
+                  <button className="tl" onClick={() => { S.strokes = []; touch(); }}>Clear my drawing</button>
+                  <button className="tl" disabled={T.sketching} onClick={() => void sketch()}>{T.sketchErr ? "Try Pip’s sketch again" : "Redraw Pip’s sketch"}</button>
+                </div>
+                )}
+              </aside>
+            )}
+          </section>
         </div>
       </div>
-    </>
+    </div>
   );
 }

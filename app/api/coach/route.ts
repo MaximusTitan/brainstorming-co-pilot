@@ -8,7 +8,7 @@ const SYSTEM = `You are Pip, a warm co-builder who helps a young inventor (age 1
 Your stance: "Yes, and". You are never a judge or a quiz master. You encourage, then help them see what it takes to build the idea.
 Rules:
 - Use short sentences and simple words.
-- The student owns the idea. Offer suggestions and options with honest, neutral trade-offs, never a single "right" answer. Never write their idea or their answers for them.
+- The student owns the idea. Offer suggestions and options with honest, neutral trade-offs, never a single "right" answer. Never write their answers for them. When asked for starting ideas, offer varied sparks they can pick or change.
 - Be specific to THEIR idea and THEIR world (their constraints). Mention a constraint only when it genuinely matters.
 - Be respectful and age-appropriate when the topic involves hardship or conflict. Never graphic.
 - Plain text only. No markdown, no emojis.`;
@@ -31,6 +31,10 @@ const schemas = {
   world: z.object({
     intro: z.string().describe("One warm sentence reacting to their goal, then inviting them to pick what is true about the world it must work in"),
     conditions: z.array(z.string()).describe("6 conditions or limits likely true for THIS goal, each 2 to 4 words, like 'Small budget' or 'No electricity'. Fit the goal, never generic. Mix resources, people, place and safety where relevant"),
+  }),
+  ideas: z.object({
+    intro: z.string().describe("One warm sentence about their goal, inviting them to pick a favorite or change one"),
+    ideas: z.array(z.string()).describe("5 clearly different ideas for the goal, each one plain sentence under 16 words, doable by a student. Mix kinds: an object, a game, an event, a service, something digital"),
   }),
   blocks: z.object({
     intro: z.string().describe("One or two warm sentences reacting to the idea, ending by inviting them to pick parts to shape first"),
@@ -76,6 +80,7 @@ type Body = {
   choice?: string;
   chosen?: { block: string; choice: string }[];
   remaining?: number;
+  avoid?: string[];
 };
 
 export async function POST(req: Request) {
@@ -83,9 +88,13 @@ export async function POST(req: Request) {
   const schema = schemas[b.step];
   if (!schema) return Response.json({ error: "Unknown step" }, { status: 400 });
 
-  if (b.step === "world") {
+  // The first two steps happen before there is an idea, so they only need the goal.
+  if (b.step === "world" || b.step === "ideas") {
+    const prompt = b.step === "world"
+      ? `Goal: ${b.topic}\nName the conditions and limits that are probably true for this specific goal.`
+      : `Goal: ${b.topic}\nThe world it must work in: ${b.world?.length ? b.world.join("; ") : "not specified"}\nSuggest starting ideas for this goal that work in that world.${b.avoid?.length ? `\nThey already have these, so suggest different ones: ${b.avoid.join(" | ")}` : ""}`;
     try {
-      const { output } = await generateText({ model: MODEL, system: SYSTEM, output: Output.object({ schema: schemas.world as never }), prompt: `Goal: ${b.topic}\nName the conditions and limits that are probably true for this specific goal.` });
+      const { output } = await generateText({ model: MODEL, system: SYSTEM, output: Output.object({ schema: schema as never }), prompt });
       return Response.json(output);
     } catch (e) {
       return Response.json({ error: (e instanceof Error ? e.message : "AI request failed").replace(/\u001b\[[0-9;]*m/g, "").trim() }, { status: 502 });
@@ -97,7 +106,8 @@ The world it must work in: ${b.world?.length ? b.world.join("; ") : "not specifi
 The student's idea: ${b.idea}
 Choices so far: ${(b.chosen ?? []).map((c) => `${c.block} = ${c.choice}`).join(" | ") || "none yet"}`;
 
-  const prompts: Record<Exclude<Step, "world">, string> = {
+  type BuildStep = Exclude<Step, "world" | "ideas">;
+  const prompts: Record<BuildStep, string> = {
     blocks: `${ctx}\nList the building blocks this specific idea needs to become real (for a device: power, brain, body; for a program: users, content, hosting; and so on). Pick what fits THIS idea.`,
     options: `${ctx}\nThe student is now shaping the part "${b.block?.label}" (${b.block?.why ?? ""}). Give 3 realistic ways to do it, with honest trade-offs, fitted to their world.`,
     react: `${ctx}\nThey just chose, for "${b.block?.label}": "${b.choice}". Parts still to shape: ${b.remaining ?? 0}.`,
@@ -110,7 +120,7 @@ Choices so far: ${(b.chosen ?? []).map((c) => `${c.block} = ${c.choice}`).join("
       model: b.step === "sketch" ? SKETCH_MODEL : MODEL,
       system: SYSTEM,
       output: Output.object({ schema: schema as never }),
-      prompt: prompts[b.step as Exclude<Step, "world">],
+      prompt: prompts[b.step as BuildStep],
     });
     return Response.json(output);
   } catch (e) {

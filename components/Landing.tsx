@@ -4,7 +4,7 @@ import { Button } from "./ui";
 
 const STEPS = [
   { n: 1, title: "Tell Pip what you want to change", text: "Type or say it. Then describe the world your idea has to work in." },
-  { n: 2, title: "Share your idea", text: "A rough sentence is perfect. Pip is excited, not judging." },
+  { n: 2, title: "Find your idea", text: "Pip suggests ideas to spark yours. Pick a favorite, remix one, or add your own." },
   { n: 3, title: "See what it takes", text: "Pip suggests the building blocks. You pick the ones to shape and choose between real options, with honest trade-offs." },
   { n: 4, title: "Watch a sketch appear", text: "Pip draws rough line art of your idea as you decide. You can draw on it too." },
   { n: 5, title: "Leave with a plan", text: "The smallest version to make this week, who can help, and everything you chose, ready to print or send to your teacher." },

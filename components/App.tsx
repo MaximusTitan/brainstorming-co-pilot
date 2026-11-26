@@ -7,14 +7,13 @@ import { newSession } from "@/lib/types";
 import { AuthScreen } from "./AuthScreen";
 import { Landing } from "./Landing";
 import { StartScreen } from "./StartScreen";
-import { Studio } from "./Studio";
-import { Button } from "./ui";
+import { Project } from "./Project";
 
 export function App() {
   const auth = useAuth();
-  const { session, replace, reset, ready, saveError } = useSession(auth.user);
+  const { session, update, replace, reset, ready, saveError } = useSession(auth.user);
   const [authMode, setAuthMode] = useState<"in" | "up" | null>(null);
-  const [screen, setScreen] = useState<"start" | "studio">("start");
+  const [screen, setScreen] = useState<"start" | "project">("start");
   // Signed-out visitors see the landing page; sign-in / sign-up opens from it.
   if (!ready || auth.loading) return null;
   if (auth.enabled && !auth.user) {
@@ -32,21 +31,20 @@ export function App() {
   return (
     <>
       {banner}
-      {screen === "studio" ? (
-        // key: a new session id remounts the studio with fresh state
-        <Studio key={session.id} session={session} onChange={replace} onHome={() => setScreen("start")}
-          right={<Button variant="ghost" className="!py-1.5 text-sm" onClick={() => setScreen("start")}>My boards</Button>} />
+      {screen === "project" ? (
+        // key: a new session id remounts both parts with fresh state
+        <Project key={session.id} session={session} update={update} onHome={() => setScreen("start")} />
       ) : (
         <StartScreen
           user={auth.user}
           onSignOut={async () => { await auth.signOut(); reset(); setScreen("start"); }}
           onOpenBoard={async (id) => {
             const s = await loadBoard(id);
-            if (s) { replace({ ...s, id }); setScreen("studio"); }
+            if (s) { replace({ ...s, id }); setScreen("project"); }
           }}
-          hasSaved={!!session.msgs.length}
-          onContinue={() => setScreen("studio")}
-          onStart={(topic) => { replace(newSession(topic, crypto.randomUUID())); setScreen("studio"); }}
+          hasSaved={!!(session.msgs.length || session.sparks.length || session.seed)}
+          onContinue={() => setScreen("project")}
+          onStart={(topic) => { replace(newSession(topic, crypto.randomUUID())); setScreen("project"); }}
         />
       )}
     </>
