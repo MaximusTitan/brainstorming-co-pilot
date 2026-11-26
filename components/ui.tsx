@@ -1,15 +1,6 @@
 "use client";
+import Image from "next/image";
 import { useRef, useState } from "react";
-import type { CardColor } from "@/lib/types";
-
-export const cardBg: Record<CardColor, string> = {
-  yellow: "bg-yellow-200 border-yellow-400",
-  green: "bg-green-200 border-green-400",
-  blue: "bg-sky-200 border-sky-400",
-  purple: "bg-violet-200 border-violet-400",
-  pink: "bg-pink-200 border-pink-400",
-  orange: "bg-orange-200 border-orange-400",
-};
 
 export function Button({
   variant = "primary",
@@ -28,8 +19,8 @@ export function Button({
 export function Header({ onHome, right }: { onHome: () => void; right?: React.ReactNode }) {
   return (
     <header className="flex items-center justify-between px-5 py-3 border-b border-stone-200 bg-white">
-      <button onClick={onHome} className="text-xl font-bold text-orange-600">
-        💡 Idea Buddy
+      <button onClick={onHome} aria-label="Idea Buddy home">
+        <Image src="/logo.png" alt="Idea Buddy" width={1248} height={314} className="h-9 w-auto" priority />
       </button>
       <div className="flex items-center gap-2">{right}</div>
     </header>
